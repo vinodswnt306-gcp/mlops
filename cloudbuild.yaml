@@ -1,7 +1,8 @@
 steps:
   - name: python:3.7
-    args: ["pip","install" , "-r", "requirements.txt]
-    id: install_dependency
+  - entrypoint: pip
+  - args: ["install" , "-r", "requirements.txt]
+
   - name: python:3.7
-    args: ["python","utils/impute_class.py"]
-    id: run_code
+  - entrypoint: python
+  - args: ["utils/impute_class.py"]

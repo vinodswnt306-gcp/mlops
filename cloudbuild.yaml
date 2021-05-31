@@ -1,8 +1,8 @@
 steps:
   - name: python:3.7
-  - entrypoint: pip
-  - args: ["install" , "-r", "requirements.txt]
+    entrypoint: pip
+    args: ["install" , "-r", "requirements.txt]
 
   - name: python:3.7
-  - entrypoint: python
-  - args: ["utils/impute_class.py"]
+    entrypoint: python
+    args: ["utils/impute_class.py"]

@@ -1,11 +1,8 @@
 steps:
   - name: python:3.7
     entrypoint: pip
-    args: ["install" , "-r", "requirements.txt]
+    args: ["install" , "-r", "requirements.txt"]
 
   - name: python:3.7
     entrypoint: python
     args: ["utils/impute_class.py"]
-
-images:
-  - us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/myimage:$SHORT_SHA

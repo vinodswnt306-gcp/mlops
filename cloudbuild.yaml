@@ -4,8 +4,7 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - '''pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py && export IMAGE="$(git log -1 --pretty=%h)" \
-    && printenv'''
+    - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
+	&& python pipeline/pipeline_run.py"
     
     

@@ -5,7 +5,7 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - "bash file.sh"
+    - "bash pipeline_base_image_builder.sh"
     
   - name: 'python'
     id: run

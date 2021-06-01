@@ -14,3 +14,6 @@ steps:
     - -c
     - 'printenv CONTAINER_NAME'
     
+# Store images in Google Artifact Registry
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/myimage:$SHORT_SHA

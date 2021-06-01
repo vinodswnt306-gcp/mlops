@@ -8,12 +8,8 @@ steps:
 	&& python pipeline/pipeline_run.py && git log -1 --pretty=%h'
     
   - name: 'python:3.7'
-    id: test
     entrypoint: /bin/sh
     args:
     - -c
     - 'printenv CONTAINER_NAME'
     
-# Store images in Google Artifact Registry
-images:
-  - us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO_NAME/myimage:$SHORT_SHA

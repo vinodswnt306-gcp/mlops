@@ -10,9 +10,5 @@ client.create_run_from_pipeline_package(
 
 
 
-import subprocess, sys, os
-
-command = subprocess.run(['git', 'log','-1', '--pretty=%h'], capture_output=True)
-print(command.stdout.decode('utf-8')[:-2])
 
 

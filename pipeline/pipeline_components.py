@@ -1,4 +1,10 @@
-CONTAINER_NAME = 'vinodswnt306/new_public_mlops:mlops_base_v5'
+import subprocess, sys, os
+command = subprocess.run(['git', 'log','-1', '--pretty=%h'], capture_output=True)
+os.environ["BASE_IMAGE_TAG"] = command.stdout.decode('utf-8').replace('\n','')
+os.environ["CONTAINER_NAME"] = 'vinodswnt306/new_public_mlops:' + command.stdout.decode('utf-8').replace('\n','')
+
+CONTAINER_NAME = os.environ["CONTAINER_NAME"]
+
 from kfp.components import InputPath, InputTextFile, OutputPath, OutputTextFile,OutputArtifact
 from typing import NamedTuple
 import kfp.dsl as dsl

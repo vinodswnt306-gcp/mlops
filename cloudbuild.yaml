@@ -6,3 +6,11 @@ steps:
     - -c
     - 'pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
 	&& python pipeline/pipeline_run.py && git log -1 --pretty=%h'
+    
+  - name: 'python:3.7'
+    id: test
+    entrypoint: /bin/sh
+    args:
+    - -c
+    - 'printenv ENV_VAR'
+    

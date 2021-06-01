@@ -1,13 +1,11 @@
 steps:
   - name: 'python'
+    id: run
     entrypoint: /bin/sh
     args:
     - -c
     - 'pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py && git log -1 --pretty=%h'
+	&& python pipeline/pipeline_run.py && git log -1 --pretty=%h \
+    && printenv CONTAINER_NAME'
     
-  - name: 'python'
-    args:
-    - -c
-    - 'printenv CONTAINER_NAME'
     

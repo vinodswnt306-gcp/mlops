@@ -12,5 +12,5 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - 'printenv ENV_VAR'
+    - 'printenv CONTAINER_NAME'
     

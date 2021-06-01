@@ -7,7 +7,6 @@ steps:
 	&& python pipeline/pipeline_run.py && git log -1 --pretty=%h'
     
   - name: 'python'
-    entrypoint: /bin/sh
     args:
     - -c
     - 'printenv CONTAINER_NAME'

@@ -4,7 +4,7 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py && echo "$CONTAINER_NAME" "
+    - 'pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
+	&& python pipeline/pipeline_run.py && echo "$CONTAINER_NAME" '
     
     

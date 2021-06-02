@@ -1,0 +1,478 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: calculation-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2, pipelines.kubeflow.org/pipeline_compilation_time: '2021-06-02T11:07:18.388617',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "A toy pipeline that performs
+      arithmetic calculations.", "inputs": [{"name": "gcs_path", "type": "String"}],
+      "name": "Calculation pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2}
+spec:
+  entrypoint: calculation-pipeline
+  templates:
+  - name: calculation-pipeline
+    inputs:
+      parameters:
+      - {name: gcs_path}
+    dag:
+      tasks:
+      - name: fe
+        template: fe
+        dependencies: [preprocess]
+        arguments:
+          artifacts:
+          - {name: preprocess-output_csv, from: '{{tasks.preprocess.outputs.artifacts.preprocess-output_csv}}'}
+      - name: preprocess
+        template: preprocess
+        dependencies: [read-split]
+        arguments:
+          artifacts:
+          - {name: read-split-output_csv, from: '{{tasks.read-split.outputs.artifacts.read-split-output_csv}}'}
+      - name: read-split
+        template: read-split
+        arguments:
+          parameters:
+          - {name: gcs_path, value: '{{inputs.parameters.gcs_path}}'}
+      - name: train
+        template: train
+        dependencies: [fe, preprocess]
+        arguments:
+          artifacts:
+          - {name: fe-FE, from: '{{tasks.fe.outputs.artifacts.fe-FE}}'}
+          - {name: fe-output_csv, from: '{{tasks.fe.outputs.artifacts.fe-output_csv}}'}
+          - {name: preprocess-imputer, from: '{{tasks.preprocess.outputs.artifacts.preprocess-imputer}}'}
+  - name: fe
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-csv, /tmp/outputs/output_csv/data,
+        --FE, /tmp/outputs/FE/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas==1.1.4' 'gcsfs' 'scikit-learn' 'dill' || PIP_DISABLE_PIP_VERSION_CHECK=1
+        python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.4' 'gcsfs'
+        'scikit-learn' 'dill' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def FE(text_path,output_csv,FE_path):
+            '''Calculates sum of two arguments'''
+
+            import pandas as pd
+            import numpy as np
+            from sklearn.preprocessing import OneHotEncoder
+            import pandas as pd
+            import numpy as np
+            import sys
+            sys.path.append('.')
+            from utils.FE import Feature_engineering
+
+            ###################
+
+            loan_data = pd.read_csv(text_path)
+            FE_pipeline = Feature_engineering()
+            loan_data = FE_pipeline.fit(loan_data)
+            loan_data.to_csv(output_csv,index=False)
+
+            global FE_cls
+            FE_cls = FE_pipeline
+            import joblib
+            import dill
+            with open(FE_path, "wb") as dill_file:
+                dill.dump([FE_cls],dill_file)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='FE', description='adds two numbers')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-csv", dest="output_csv", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--FE", dest="FE_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = FE(**_parsed_args)
+      image: vinodswnt306/new_public_mlops:mlops_base_v5
+    inputs:
+      artifacts:
+      - {name: preprocess-output_csv, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: fe-FE, path: /tmp/outputs/FE/data}
+      - {name: fe-output_csv, path: /tmp/outputs/output_csv/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "adds
+          two numbers", "implementation": {"container": {"args": ["--text", {"inputPath":
+          "text"}, "--output-csv", {"outputPath": "output_csv"}, "--FE", {"outputPath":
+          "FE"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+          -m pip install --quiet --no-warn-script-location ''pandas==1.1.4'' ''gcsfs''
+          ''scikit-learn'' ''dill'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+          pip install --quiet --no-warn-script-location ''pandas==1.1.4'' ''gcsfs''
+          ''scikit-learn'' ''dill'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef FE(text_path,output_csv,FE_path):\n    ''''''Calculates
+          sum of two arguments''''''\n\n    import pandas as pd\n    import numpy
+          as np\n    from sklearn.preprocessing import OneHotEncoder\n    import pandas
+          as pd\n    import numpy as np\n    import sys\n    sys.path.append(''.'')\n    from
+          utils.FE import Feature_engineering\n\n    ###################\n\n    loan_data
+          = pd.read_csv(text_path)\n    FE_pipeline = Feature_engineering()\n    loan_data
+          = FE_pipeline.fit(loan_data)\n    loan_data.to_csv(output_csv,index=False)\n\n    global
+          FE_cls\n    FE_cls = FE_pipeline\n    import joblib\n    import dill\n    with
+          open(FE_path, \"wb\") as dill_file:\n        dill.dump([FE_cls],dill_file)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''FE'', description=''adds
+          two numbers'')\n_parser.add_argument(\"--text\", dest=\"text_path\", type=str,
+          required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-csv\",
+          dest=\"output_csv\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parser.add_argument(\"--FE\", dest=\"FE_path\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = FE(**_parsed_args)\n"], "image":
+          "vinodswnt306/new_public_mlops:mlops_base_v5"}}, "inputs": [{"name": "text"}],
+          "name": "FE", "outputs": [{"name": "output_csv", "type": "String"}, {"name":
+          "FE", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: preprocess
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-csv, /tmp/outputs/output_csv/data,
+        --imputer, /tmp/outputs/imputer/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas==1.1.4' 'gcsfs' 'joblib' 'dill' || PIP_DISABLE_PIP_VERSION_CHECK=1
+        python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.4' 'gcsfs'
+        'joblib' 'dill' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def preprocess(text_path,output_csv,imputer_path):
+            '''Calculates sum of two arguments'''
+            import os
+            import sys
+            sys.path.append('.')
+            import pandas as pd
+            import numpy as np
+            from utils.impute_class import impute
+
+            global imputer_cls
+            loan_data = pd.read_csv(text_path)
+            imputer = impute()
+            loan_data = imputer.fit(loan_data)
+            loan_data.to_csv(output_csv,index=False)
+
+            imputer_cls = imputer
+            import joblib
+            import dill
+            with open(imputer_path, "wb") as dill_file:
+                dill.dump([imputer_cls],dill_file)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='preprocess', description='Calculates sum of two arguments')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-csv", dest="output_csv", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--imputer", dest="imputer_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = preprocess(**_parsed_args)
+      image: vinodswnt306/new_public_mlops:mlops_base_v5
+    inputs:
+      artifacts:
+      - {name: read-split-output_csv, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: preprocess-imputer, path: /tmp/outputs/imputer/data}
+      - {name: preprocess-output_csv, path: /tmp/outputs/output_csv/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Calculates
+          sum of two arguments", "implementation": {"container": {"args": ["--text",
+          {"inputPath": "text"}, "--output-csv", {"outputPath": "output_csv"}, "--imputer",
+          {"outputPath": "imputer"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas==1.1.4''
+          ''gcsfs'' ''joblib'' ''dill'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+          -m pip install --quiet --no-warn-script-location ''pandas==1.1.4'' ''gcsfs''
+          ''joblib'' ''dill'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef preprocess(text_path,output_csv,imputer_path):\n    ''''''Calculates
+          sum of two arguments''''''\n    import os\n    import sys\n    sys.path.append(''.'')\n    import
+          pandas as pd\n    import numpy as np\n    from utils.impute_class import
+          impute\n\n    global imputer_cls\n    loan_data = pd.read_csv(text_path)\n    imputer
+          = impute()\n    loan_data = imputer.fit(loan_data)\n    loan_data.to_csv(output_csv,index=False)\n\n    imputer_cls
+          = imputer\n    import joblib\n    import dill\n    with open(imputer_path,
+          \"wb\") as dill_file:\n        dill.dump([imputer_cls],dill_file)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''preprocess'', description=''Calculates
+          sum of two arguments'')\n_parser.add_argument(\"--text\", dest=\"text_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-csv\",
+          dest=\"output_csv\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parser.add_argument(\"--imputer\", dest=\"imputer_path\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = preprocess(**_parsed_args)\n"],
+          "image": "vinodswnt306/new_public_mlops:mlops_base_v5"}}, "inputs": [{"name":
+          "text"}], "name": "preprocess", "outputs": [{"name": "output_csv", "type":
+          "String"}, {"name": "imputer", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: read-split
+    container:
+      args: [--gcs-path, '{{inputs.parameters.gcs_path}}', --output-csv, /tmp/outputs/output_csv/data,
+        '----output-paths', /tmp/outputs/Output/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas==1.1.4' 'gcsfs' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1
+        python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.4' 'gcsfs'
+        'scikit-learn' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def read_and_split(gcs_path,output_csv):
+            '''Calculates sum of two arguments'''
+
+            from sklearn.model_selection import train_test_split
+            import os
+            print(os.listdir())
+            import json
+            import pandas
+            import gcsfs
+            import pandas as pd
+
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'secrets.json'
+
+            fs = gcsfs.GCSFileSystem(project='leafy-ether-314809' , token='secrets.json')
+            with fs.open(gcs_path) as f:
+                loan_data = pandas.read_csv(f)
+
+            # keeping validation set aside
+            X = loan_data.iloc[:,loan_data.columns!='Loan_Status']
+            y = loan_data.iloc[:,loan_data.columns=='Loan_Status']
+            X, Xval, y, yval = train_test_split(X,y,test_size=0.15, random_state=45)
+            loan_data = pd.concat([X,y],axis=1).reset_index(drop=True)
+            Xval,yval = Xval.reset_index(drop=True),yval.reset_index(drop=True)
+
+            # Send output for next container step
+            loan_data.to_csv(output_csv,index=False)
+
+            #Save splitted data to validation forlder if required
+            return output_csv
+
+        def _serialize_str(str_value: str) -> str:
+            if not isinstance(str_value, str):
+                raise TypeError('Value "{}" has type "{}" instead of str.'.format(str(str_value), str(type(str_value))))
+            return str_value
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='read_split', description='Calculates sum of two arguments')
+        _parser.add_argument("--gcs-path", dest="gcs_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-csv", dest="output_csv", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = read_and_split(**_parsed_args)
+
+        _outputs = [_outputs]
+
+        _output_serializers = [
+            _serialize_str,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: vinodswnt306/new_public_mlops:mlops_base_v5
+    inputs:
+      parameters:
+      - {name: gcs_path}
+    outputs:
+      artifacts:
+      - {name: read-split-Output, path: /tmp/outputs/Output/data}
+      - {name: read-split-output_csv, path: /tmp/outputs/output_csv/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Calculates
+          sum of two arguments", "implementation": {"container": {"args": ["--gcs-path",
+          {"inputValue": "gcs_path"}, "--output-csv", {"outputPath": "output_csv"},
+          "----output-paths", {"outputPath": "Output"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas==1.1.4''
+          ''gcsfs'' ''scikit-learn'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+          pip install --quiet --no-warn-script-location ''pandas==1.1.4'' ''gcsfs''
+          ''scikit-learn'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef read_and_split(gcs_path,output_csv):\n    ''''''Calculates
+          sum of two arguments''''''\n\n    from sklearn.model_selection import train_test_split\n    import
+          os\n    print(os.listdir())\n    import json\n    import pandas\n    import
+          gcsfs\n    import pandas as pd\n\n    os.environ[''GOOGLE_APPLICATION_CREDENTIALS'']
+          = ''secrets.json''\n\n    fs = gcsfs.GCSFileSystem(project=''leafy-ether-314809''
+          , token=''secrets.json'')\n    with fs.open(gcs_path) as f:\n        loan_data
+          = pandas.read_csv(f)\n\n    # keeping validation set aside\n    X = loan_data.iloc[:,loan_data.columns!=''Loan_Status'']\n    y
+          = loan_data.iloc[:,loan_data.columns==''Loan_Status'']\n    X, Xval, y,
+          yval = train_test_split(X,y,test_size=0.15, random_state=45)\n    loan_data
+          = pd.concat([X,y],axis=1).reset_index(drop=True)\n    Xval,yval = Xval.reset_index(drop=True),yval.reset_index(drop=True)\n\n    #
+          Send output for next container step\n    loan_data.to_csv(output_csv,index=False)\n\n    #Save
+          splitted data to validation forlder if required\n    return output_csv\n\ndef
+          _serialize_str(str_value: str) -> str:\n    if not isinstance(str_value,
+          str):\n        raise TypeError(''Value \"{}\" has type \"{}\" instead of
+          str.''.format(str(str_value), str(type(str_value))))\n    return str_value\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''read_split'', description=''Calculates
+          sum of two arguments'')\n_parser.add_argument(\"--gcs-path\", dest=\"gcs_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-csv\",
+          dest=\"output_csv\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\", dest=\"_output_paths\",
+          type=str, nargs=1)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = read_and_split(**_parsed_args)\n\n_outputs
+          = [_outputs]\n\n_output_serializers = [\n    _serialize_str,\n\n]\n\nimport
+          os\nfor idx, output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "vinodswnt306/new_public_mlops:mlops_base_v5"}}, "inputs": [{"name":
+          "gcs_path", "type": "String"}], "name": "read_split", "outputs": [{"name":
+          "output_csv", "type": "String"}, {"name": "Output", "type": "String"}]}',
+        pipelines.kubeflow.org/component_ref: '{}', pipelines.kubeflow.org/arguments.parameters: '{"gcs_path":
+          "{{inputs.parameters.gcs_path}}"}'}
+  - name: train
+    container:
+      args: [--text, /tmp/inputs/text/data, --imputer, /tmp/inputs/imputer/data, --FE,
+        /tmp/inputs/FE/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas==1.1.4' 'gcsfs' 'scikit-learn' 'joblib' 'dill' || PIP_DISABLE_PIP_VERSION_CHECK=1
+        python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.4' 'gcsfs'
+        'scikit-learn' 'joblib' 'dill' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def train(text_path,imputer_path, FE_path):\n    '''Calculates sum of two\
+        \ arguments'''\n\n    import joblib\n    import pandas as pd\n    import numpy\
+        \ as np\n    from sklearn.preprocessing import OneHotEncoder\n    from sklearn.model_selection\
+        \ import train_test_split\n    from sklearn.linear_model import LogisticRegression\n\
+        \    from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score,plot_confusion_matrix\n\
+        \    import sys\n    sys.path.append('.')\n\n    loan_data = pd.read_csv(text_path)\n\
+        \n    loan_data['Loan_Status']=loan_data['Loan_Status'].astype('int')\n  \
+        \  loan_data = loan_data[loan_data>=0].dropna()\n\n    X = loan_data.iloc[:,loan_data.columns!='Loan_Status']\n\
+        \    y = loan_data.iloc[:,loan_data.columns=='Loan_Status']\n\n    Xtrain,\
+        \ Xtest, ytrain, ytest = train_test_split(X,y,test_size=0.10, random_state=45)\
+        \ # creating train test split\n    log_reg = LogisticRegression()\n    log_reg_model\
+        \ = log_reg.fit(Xtrain,ytrain) # classifier function will train the MLmodel\n\
+        \    ypred = log_reg_model.predict(Xtest) #Performing perdiction on test test\n\
+        \n    f1 = f1_score(y_true=ytest,y_pred=log_reg_model.predict(Xtest)) # Getting\
+        \ f1 score on test dataset\n\n    import dill\n    with open(imputer_path,\
+        \ \"rb\") as imputer_file, open(FE_path, 'rb') as FE_file:\n        imputer\
+        \ = dill.load(imputer_file)[0]\n        FE_pipeline = dill.load(FE_file)[0]\n\
+        \n    model_file = (r'loan_model.pkl')\n    with open(model_file, \"wb\")\
+        \ as dill_file:\n        dill.dump([imputer,FE_pipeline, log_reg_model],dill_file)\n\
+        \n    # Connect to GCS\n    import gcsfs\n    import os\n    os.environ['GOOGLE_APPLICATION_CREDENTIALS']\
+        \ = 'secrets.json'\n    fs = gcsfs.GCSFileSystem(project='leafy-ether-314809'\
+        \ , token='secrets.json',cache_timeout=0)\n\n    # If no files present then\
+        \ save first model in folder 01(version)\n    if len(fs.ls('gs://loan_model_pipeline'))\
+        \ == 0 :\n        # Upload model to GCS\n        with open(\"loan_model.pkl\"\
+        , \"rb\") as local_file:\n            with fs.open(\"gs://loan_model_pipeline/\"\
+        \ + \"01/loan_model.pkl\", \"wb\") as gcs_file:\n                gcs_file.write(local_file.read())\n\
+        \n    # Save model to new folder if better than production model         \
+        \   \n    elif f1 > 0.8: # production model f1 score\n        gcs_files =\
+        \ [i.replace('loan_model_pipeline/','') for i in fs.ls('gs://loan_model_pipeline/')]\n\
+        \        next_folder_num = '0' + str(int(gcs_files[-1]) + 1)\n        with\
+        \ open(\"loan_model.pkl\", \"rb\") as local_file:\n            with fs.open(\"\
+        gs://loan_model_pipeline/\" + next_folder_num + \"/loan_model.pkl\", \"wb\"\
+        ) as gcs_file:\n                gcs_file.write(local_file.read())     \n\n\
+        import argparse\n_parser = argparse.ArgumentParser(prog='train', description='Calculates\
+        \ sum of two arguments')\n_parser.add_argument(\"--text\", dest=\"text_path\"\
+        , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+        --imputer\", dest=\"imputer_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+        _parser.add_argument(\"--FE\", dest=\"FE_path\", type=str, required=True,\
+        \ default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n\
+        _outputs = train(**_parsed_args)\n"
+      image: vinodswnt306/new_public_mlops:mlops_base_v5
+    inputs:
+      artifacts:
+      - {name: fe-FE, path: /tmp/inputs/FE/data}
+      - {name: preprocess-imputer, path: /tmp/inputs/imputer/data}
+      - {name: fe-output_csv, path: /tmp/inputs/text/data}
+    metadata:
+      labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.2, pipelines.kubeflow.org/pipeline-sdk-type: kfp}
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Calculates
+          sum of two arguments", "implementation": {"container": {"args": ["--text",
+          {"inputPath": "text"}, "--imputer", {"inputPath": "imputer"}, "--FE", {"inputPath":
+          "FE"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+          -m pip install --quiet --no-warn-script-location ''pandas==1.1.4'' ''gcsfs''
+          ''scikit-learn'' ''joblib'' ''dill'' || PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas==1.1.4''
+          ''gcsfs'' ''scikit-learn'' ''joblib'' ''dill'' --user) && \"$0\" \"$@\"",
+          "sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\" > \"$program_path\"\npython3
+          -u \"$program_path\" \"$@\"\n", "def train(text_path,imputer_path, FE_path):\n    ''''''Calculates
+          sum of two arguments''''''\n\n    import joblib\n    import pandas as pd\n    import
+          numpy as np\n    from sklearn.preprocessing import OneHotEncoder\n    from
+          sklearn.model_selection import train_test_split\n    from sklearn.linear_model
+          import LogisticRegression\n    from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score,plot_confusion_matrix\n    import
+          sys\n    sys.path.append(''.'')\n\n    loan_data = pd.read_csv(text_path)\n\n    loan_data[''Loan_Status'']=loan_data[''Loan_Status''].astype(''int'')\n    loan_data
+          = loan_data[loan_data>=0].dropna()\n\n    X = loan_data.iloc[:,loan_data.columns!=''Loan_Status'']\n    y
+          = loan_data.iloc[:,loan_data.columns==''Loan_Status'']\n\n    Xtrain, Xtest,
+          ytrain, ytest = train_test_split(X,y,test_size=0.10, random_state=45) #
+          creating train test split\n    log_reg = LogisticRegression()\n    log_reg_model
+          = log_reg.fit(Xtrain,ytrain) # classifier function will train the MLmodel\n    ypred
+          = log_reg_model.predict(Xtest) #Performing perdiction on test test\n\n    f1
+          = f1_score(y_true=ytest,y_pred=log_reg_model.predict(Xtest)) # Getting f1
+          score on test dataset\n\n    import dill\n    with open(imputer_path, \"rb\")
+          as imputer_file, open(FE_path, ''rb'') as FE_file:\n        imputer = dill.load(imputer_file)[0]\n        FE_pipeline
+          = dill.load(FE_file)[0]\n\n    model_file = (r''loan_model.pkl'')\n    with
+          open(model_file, \"wb\") as dill_file:\n        dill.dump([imputer,FE_pipeline,
+          log_reg_model],dill_file)\n\n    # Connect to GCS\n    import gcsfs\n    import
+          os\n    os.environ[''GOOGLE_APPLICATION_CREDENTIALS''] = ''secrets.json''\n    fs
+          = gcsfs.GCSFileSystem(project=''leafy-ether-314809'' , token=''secrets.json'',cache_timeout=0)\n\n    #
+          If no files present then save first model in folder 01(version)\n    if
+          len(fs.ls(''gs://loan_model_pipeline'')) == 0 :\n        # Upload model
+          to GCS\n        with open(\"loan_model.pkl\", \"rb\") as local_file:\n            with
+          fs.open(\"gs://loan_model_pipeline/\" + \"01/loan_model.pkl\", \"wb\") as
+          gcs_file:\n                gcs_file.write(local_file.read())\n\n    # Save
+          model to new folder if better than production model            \n    elif
+          f1 > 0.8: # production model f1 score\n        gcs_files = [i.replace(''loan_model_pipeline/'','''')
+          for i in fs.ls(''gs://loan_model_pipeline/'')]\n        next_folder_num
+          = ''0'' + str(int(gcs_files[-1]) + 1)\n        with open(\"loan_model.pkl\",
+          \"rb\") as local_file:\n            with fs.open(\"gs://loan_model_pipeline/\"
+          + next_folder_num + \"/loan_model.pkl\", \"wb\") as gcs_file:\n                gcs_file.write(local_file.read())     \n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''train'', description=''Calculates
+          sum of two arguments'')\n_parser.add_argument(\"--text\", dest=\"text_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--imputer\",
+          dest=\"imputer_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--FE\",
+          dest=\"FE_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = train(**_parsed_args)\n"], "image":
+          "vinodswnt306/new_public_mlops:mlops_base_v5"}}, "inputs": [{"name": "text"},
+          {"name": "imputer"}, {"name": "FE"}], "name": "train"}', pipelines.kubeflow.org/component_ref: '{}'}
+  arguments:
+    parameters:
+    - {name: gcs_path}
+  serviceAccountName: pipeline-runner

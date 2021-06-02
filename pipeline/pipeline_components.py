@@ -2,9 +2,7 @@ import subprocess, sys, os
 command = subprocess.run(['git', 'log','-1', '--pretty=%h'], capture_output=True)
 os.environ["BASE_IMAGE_TAG"] = command.stdout.decode('utf-8').replace('\n','')
 os.environ["CONTAINER_NAME"] = 'vinodswnt306/new_public_mlops:' + command.stdout.decode('utf-8').replace('\n','')
-
-subprocess.run(['bash', '-c', 'export', 'CONTAINER_NAME="$(git log -1 --pretty=%h)"'])
-
+# subprocess.run(['bash', '-c', 'export', 'CONTAINER_NAME="$(git log -1 --pretty=%h)"'])
 CONTAINER_NAME = os.environ["CONTAINER_NAME"]
 
 # CONTAINER_NAME = 'vinodswnt306/new_public_mlops:aada71f'

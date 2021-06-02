@@ -15,11 +15,13 @@ initial_length = len(fs.ls('gs://loan_model_pipeline'))
 
 import kfp
 client = kfp.Client('https://2886795278-31380-shadow05.environments.katacoda.com/pipeline/')
-client.create_run_from_pipeline_package(
-    pipeline_file='pipeline/ds_train.yaml',
-    arguments = {'gcs_path': 'gs://bucket-306/data/train/dataloan.csv' },experiment_name='MLOps_prod'
-    
-)
+run = client.create_run_from_pipeline_package(
+        pipeline_file='pipeline/ds_train.yaml',
+        arguments = {'gcs_path': 'gs://bucket-306/data/train/dataloan.csv' },experiment_name='MLOps_prod'
+
+        )
+
+client.wait_for_run_completion(run.run_id, 3600)
 
 # If model was registered then save this pipeline to model's file
 new_length = len(fs.ls('gs://loan_model_pipeline'))

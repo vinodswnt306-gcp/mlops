@@ -16,14 +16,14 @@ steps:
 	&& python pipeline/pipeline_run.py"
     
   - name: 'gcr.io/cloud-builders/docker'
-    id: image
+    id: image2
     entrypoint: /bin/sh
     args:
     - -c
     - "printenv"
     
   - name: 'python'
-    id: run
+    id: run2
     entrypoint: /bin/sh
     args:
     - -c

@@ -7,6 +7,7 @@ subprocess.run(['bash', '-c', 'export', 'CONTAINER_NAME="$(git log -1 --pretty=%
 
 CONTAINER_NAME = os.environ["CONTAINER_NAME"]
 
+# CONTAINER_NAME = 'vinodswnt306/new_public_mlops:aada71f'
 from kfp.components import InputPath, InputTextFile, OutputPath, OutputTextFile,OutputArtifact
 from typing import NamedTuple
 import kfp.dsl as dsl
@@ -145,14 +146,32 @@ def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath
         FE_pipeline = dill.load(FE_file)[0]
         
     
-    model_file = (r'model\loan_model.pkl')
+    model_file = (r'loan_model.pkl')
+    with open(model_file, "wb") as dill_file:
+        dill.dump([imputer,FE_pipeline, log_reg_model],dill_file)
     
-    #     with open(imputer_path, "rb") as dill_file:
-    #         dill.dump([imputer,log_reg_model],dill_file)
+    # Connect to GCS
+    import gcsfs
+    import os
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'secrets.json'
+    fs = gcsfs.GCSFileSystem(project='leafy-ether-314809' , token='secrets.json',cache_timeout=0)
+
+    # If no files present then save first model in folder 01(version)
+    if len(fs.ls('gs://loan_model_pipeline')) == 0 :
+        # Upload model to GCS
+        with open("loan_model.pkl", "rb") as local_file:
+            with fs.open("gs://loan_model_pipeline/" + "01/loan_model.pkl", "wb") as gcs_file:
+                gcs_file.write(local_file.read())
+
+    # Save model to new folder if better than production model            
+    elif f1 > 0.8: # production model f1 score
+        gcs_files = [i.replace('loan_model_pipeline/','') for i in fs.ls('gs://loan_model_pipeline/')]
+        next_folder_num = '0' + str(int(gcs_files[-1]) + 1)
+        with open("loan_model.pkl", "rb") as local_file:
+            with fs.open("gs://loan_model_pipeline/" + next_folder_num + "/loan_model.pkl", "wb") as gcs_file:
+                gcs_file.write(local_file.read())     
     
-    # Check with production model and save it if better than it
     
-    # Save model as well as its pipeline yaml file
     
     
     

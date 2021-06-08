@@ -7,8 +7,8 @@ import pandas as pd
 
 # Connect to GCS
 import gcsfs
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'docker/secrets.json'
-fs = gcsfs.GCSFileSystem(project='leafy-ether-314809' , token='docker/secrets.json',cache_timeout=0)
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'secrets.json'
+fs = gcsfs.GCSFileSystem(project='leafy-ether-314809' , token='secrets.json',cache_timeout=0)
 initial_length = len(fs.ls('gs://loan_model_pipeline'))
 
 # Run kfp pipeline

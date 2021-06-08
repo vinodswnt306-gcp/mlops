@@ -9,7 +9,7 @@ steps:
     
   - name: 'python'
     env:
-    - 'NEW_CONTAINER'=${_CONTAINER_NAME}'
+    - 'NEW_CONTAINER=${_CONTAINER_NAME}'
     id: run
     entrypoint: /bin/sh
     args:

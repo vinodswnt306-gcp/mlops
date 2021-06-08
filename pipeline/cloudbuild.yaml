@@ -13,7 +13,7 @@ steps:
     args:
     - -c
     - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py"
+	&& python pipeline/pipeline_run.py && printenv"
     
 
     

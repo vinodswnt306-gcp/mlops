@@ -181,17 +181,16 @@ def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath
     if len(fs.ls('gs://loan_model_pipeline')) == 0 :
         # Upload model to GCS
         with open("loan_model.pkl", "rb") as local_file:
-            with fs.open("gs://loan_model_pipeline/" + "01/loan_model.pkl", "wb") as gcs_file:
+            with fs.open("gs://loan_model_pipeline/" + "1/loan_model.pkl", "wb") as gcs_file:
                 gcs_file.write(local_file.read())
 
     # Save model to new folder if better than production model            
     elif f1 > 0.8: # production model f1 score
         gcs_files = [i.replace('loan_model_pipeline/','') for i in fs.ls('gs://loan_model_pipeline/')]
-        next_folder_num = '0' + str(int(gcs_files[-1]) + 1)
+        next_folder_num = str(int(gcs_files[-1]) + 1)
         with open("loan_model.pkl", "rb") as local_file:
             with fs.open("gs://loan_model_pipeline/" + next_folder_num + "/loan_model.pkl", "wb") as gcs_file:
-                gcs_file.write(local_file.read())     
-    
+                gcs_file.write(local_file.read())   
     
     
     

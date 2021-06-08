@@ -1,8 +1,6 @@
 import subprocess, sys, os
 command = subprocess.run(['git', 'log','-1', '--pretty=%h'], capture_output=True)
-os.environ["BASE_IMAGE_TAG"] = command.stdout.decode('utf-8').replace('\n','')
 os.environ["CONTAINER_NAME"] = 'vinodswnt306/new_public_mlops:' + command.stdout.decode('utf-8').replace('\n','')
-# subprocess.run(['bash', '-c', 'export', 'CONTAINER_NAME="$(git log -1 --pretty=%h)"'])
 CONTAINER_NAME = os.environ["CONTAINER_NAME"]
 
 # CONTAINER_NAME = 'vinodswnt306/new_public_mlops:aada71f'
@@ -15,8 +13,7 @@ import kfp.dsl as dsl
     description='',
     base_image=CONTAINER_NAME  # you can define the base image here, or when you build in the next step. 
 )
-def read_and_split(gcs_path: str,output_csv: OutputPath(str)) -> str:
-    '''Calculates sum of two arguments'''
+def read_and_split(gcs_path: str, output_csv: OutputPath(str),mlpipeline_ui_metadata_path: OutputPath('ui') ):
     
     from sklearn.model_selection import train_test_split
     import os
@@ -43,9 +40,23 @@ def read_and_split(gcs_path: str,output_csv: OutputPath(str)) -> str:
     loan_data.to_csv(output_csv,index=False)
     
     #Save splitted data to validation forlder if required
-    return output_csv
 
-        
+    # Log train data files
+    file_list = [i+'#'+fs.stat(i)['generation'] for i in fs.ls(gcs_path)[1:]]
+    metadata = {
+    'outputs' : [
+    # Markdown that is hardcoded inline
+    {
+      'storage': 'inline',
+      'source': '# Training files used\n'+ ','.join(file_list),
+      'type': 'markdown',
+    }]
+      }
+    with open(mlpipeline_ui_metadata_path, 'w') as f:
+        json.dump(metadata, f)
+    
+
+
 @dsl.python_component(
     name='preprocess',
     description='',
@@ -110,8 +121,7 @@ def FE(text_path: InputPath(),output_csv: OutputPath(str),FE_path: OutputPath(st
     description='',
     base_image=CONTAINER_NAME  # you can define the base image here, or when you build in the next step. 
 )
-def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath()):
-    '''Calculates sum of two arguments'''
+def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath(), mlpipeline_metrics_path: OutputPath('Metrics')):
     
     import joblib
     import pandas as pd
@@ -138,6 +148,19 @@ def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath
 
     f1 = f1_score(y_true=ytest,y_pred=log_reg_model.predict(Xtest)) # Getting f1 score on test dataset
     
+    # Log metrics
+    import json
+    accuracy = 0.9
+    metrics = {
+    'metrics': [{
+      'name': 'accuracy-score', # The name of the metric. Visualized as the column name in the runs table.
+      'numberValue':  accuracy, # The value of the metric. Must be a numeric value.
+      'format': "PERCENTAGE",   # The optional format of the metric. Supported values are "RAW" (displayed in raw format) and "PERCENTAGE" (displayed in percentage format).
+    }]
+    }
+    with open(mlpipeline_metrics_path, 'w') as f:
+        json.dump(metrics, f)
+
     import dill
     with open(imputer_path, "rb") as imputer_file, open(FE_path, 'rb') as FE_file:
         imputer = dill.load(imputer_file)[0]

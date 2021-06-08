@@ -9,7 +9,7 @@ steps:
     
   - name: 'python'
     env:
-    - 'MY_SECRET_dsaadsadsadads=${_CONTAINER_NAME}'
+    - 'NEW_CONTAINER'=${_CONTAINER_NAME}'
     id: run
     entrypoint: /bin/sh
     args:

@@ -15,5 +15,5 @@ steps:
     - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
 	&& python pipeline/pipeline_run.py && printenv"
     env:
-    - 'MY_SECRET_dsaadsadsadads =${_CONTAINER_NAME}'
+    - 'MY_SECRET_dsaadsadsadads=${_CONTAINER_NAME}'
     

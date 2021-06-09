@@ -1,22 +1,20 @@
 steps:
-  # Docker Build
+  # this builds base image to use it for kubeflow pipelines
   - name: 'gcr.io/cloud-builders/docker'
-    id: image
+    id: base_image_creation
     entrypoint: /bin/sh
     args:
     - -c
     - "bash pipeline/pipeline_base_image_builder.sh"
-    
+
+  # this runs files required for training 
   - name: 'python'
     env:
     - 'NEW_CONTAINER=${_CONTAINER_NAME}'
-    id: run
+    id: train_model
     entrypoint: /bin/sh
     args:
     - -c
     - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py && printenv"
-
-    
-
-
+	&& python pipeline/pipeline_run.py"
+  # In above line we can add execute testing scripts as well

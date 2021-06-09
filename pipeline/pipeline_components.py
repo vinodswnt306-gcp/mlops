@@ -246,6 +246,7 @@ def train(text_path: InputPath(),imputer_path: InputPath(), FE_path :  InputPath
     # Save model to new folder if better than production model            
     elif f1 > Production_model_f1: # production model f1 score
         gcs_files = [i.replace('loan_model_pipeline/','') for i in fs.ls('gs://loan_model_pipeline/')]
+	print(gcs_files)
         next_folder_num = str(int(gcs_files[-1]) + 1)
 	print(next_folder_num)
         with open("loan_model.pkl", "rb") as local_file:

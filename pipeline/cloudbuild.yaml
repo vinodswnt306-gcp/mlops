@@ -5,7 +5,7 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - "bash pipeline/pipeline_base_image_builder.sh"
+    - "bash pipeline/pipeline_base_image_builder.sh && touch NewFile.txt"
 
   # this runs files required for training 
   - name: 'python'
@@ -15,6 +15,6 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py"
+    - "ls -l && pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
+	&& python pipeline/pipeline_run.py "
   # In above line we can add execute testing scripts as well

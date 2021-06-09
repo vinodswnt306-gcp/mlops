@@ -17,3 +17,9 @@ run = client.create_run_from_pipeline_package(
         pipeline_file='pipeline/ds_train.yaml',
         arguments = {'gcs_path': 'gs://bucket-306/data/train/dataloan.csv' },experiment_name='MLOps_prod'
         )
+
+client.wait_for_run_completion(run.run_id, 3600)
+if client.get_run(run.run_id).run.status == 'Succeeded':
+    print("completed")
+else:
+    print("job failed")

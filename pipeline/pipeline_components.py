@@ -36,7 +36,6 @@ def read_and_split(gcs_path: str,output_csv: OutputPath(str),mlpipeline_ui_metad
     mlpipeline_ui_metadata_path : Path where metadata is stored
 
     """
-    
     from sklearn.model_selection import train_test_split
     import os
     print(os.listdir())
@@ -45,10 +44,14 @@ def read_and_split(gcs_path: str,output_csv: OutputPath(str),mlpipeline_ui_metad
     import gcsfs
     import pandas as pd
     
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'secrets.json'
+    file_list = gcs_path.split(',')
     
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'secrets.json'
     fs = gcsfs.GCSFileSystem(project='leafy-ether-314809' , token='secrets.json')
-    with fs.open(gcs_path) as f:
+    
+    # Note : Here I have read only 1 file, we can create empty dataframe and 
+    # read all the csv files in it with concat on axis 0 (stacking one above the other)
+    with fs.open(file_list[0]) as f:
         loan_data = pandas.read_csv(f)
         
     # keeping validation set aside
@@ -61,10 +64,8 @@ def read_and_split(gcs_path: str,output_csv: OutputPath(str),mlpipeline_ui_metad
     # Send output for next container step
     loan_data.to_csv(output_csv,index=False)
     
-    #Save splitted data to validation forlder if required
-
     # Log train data files
-    file_list = [i+'#'+fs.stat(i)['generation'] for i in fs.ls(gcs_path)[1:]]
+    file_list = [i+'#'+fs.stat(i)['generation'] for i in file_list]
     metadata = {
     'outputs' : [
     # Markdown that is hardcoded inline
@@ -77,6 +78,7 @@ def read_and_split(gcs_path: str,output_csv: OutputPath(str),mlpipeline_ui_metad
     with open(mlpipeline_ui_metadata_path, 'w') as f:
         json.dump(metadata, f)
     
+    #Save splitted data to validation forlder if required
 
 
 # Step 2 of Kubeflow pipeline 

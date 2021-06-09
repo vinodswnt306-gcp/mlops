@@ -18,7 +18,7 @@ initial_length = len(fs.ls('gs://loan_model_pipeline'))
 # Run kfp pipeline
 import kfp
 # Set up Kubeflow client using its url
-client = kfp.Client('https://2886795278-31380-shadow05.environments.katacoda.com/pipeline/')
+client = kfp.Client('https://2886795272-31380-shadow05.environments.katacoda.com/pipeline/')
 run = client.create_run_from_pipeline_package(
         pipeline_file='pipeline/ds_train.yaml',
         arguments = {'gcs_path': 'gs://bucket-306/data/train/dataloan.csv' },experiment_name='MLOps_prod'

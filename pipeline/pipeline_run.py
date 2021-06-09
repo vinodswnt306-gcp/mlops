@@ -34,3 +34,4 @@ if new_length > initial_length:
     with open("pipeline/ds_train.yaml", "rb") as local_file:
         with fs.open("gs://loan_model_pipeline/" + folder_num + "/model_pipeline.yaml", "wb") as gcs_file:
             gcs_file.write(local_file.read())
+

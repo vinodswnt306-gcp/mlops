@@ -1,4 +1,15 @@
 steps:
+  # this runs files required for training 
+  - name: 'python'
+    env:
+    - 'NEW_CONTAINER=${_CONTAINER_NAME}'
+    id: Create and Compile pipeline
+    entrypoint: /bin/sh
+    args:
+    - -c
+    - "pip install -r requirements.txt && python pipeline/pipeline_publisher.py"
+  # In above line we can add execute testing scripts as well
+
   # this builds base image to use it for kubeflow pipelines
   - name: 'gcr.io/cloud-builders/docker'
     id: base_image_creation
@@ -11,10 +22,9 @@ steps:
   - name: 'python'
     env:
     - 'NEW_CONTAINER=${_CONTAINER_NAME}'
-    id: train_model
+    id: Run pipeline
     entrypoint: /bin/sh
     args:
     - -c
-    - "ls -l && pip install -r requirements.txt && python pipeline/pipeline_publisher.py \
-	&& python pipeline/pipeline_run.py "
-  # In above line we can add execute testing scripts as well
+    - "python pipeline/pipeline_run.py"
+

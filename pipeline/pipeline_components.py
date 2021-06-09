@@ -12,7 +12,7 @@ import kfp.dsl as dsl
 git_commit_id = subprocess.run(['git', 'log','-1', '--pretty=%h'], capture_output=True)
 
 # Create container name with new tag
-os.environ["CONTAINER_NAME"] = 'vinodswnt306/new_public_mlops:' + command.stdout.decode('utf-8').replace('\n','')
+os.environ["CONTAINER_NAME"] = 'vinodswnt306/new_public_mlops:' + git_commit_id.stdout.decode('utf-8').replace('\n','')
 CONTAINER_NAME = os.environ["CONTAINER_NAME"]
 
 # e.g.

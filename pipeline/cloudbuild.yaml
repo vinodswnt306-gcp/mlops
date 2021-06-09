@@ -26,5 +26,5 @@ steps:
     entrypoint: /bin/sh
     args:
     - -c
-    - "python pipeline/pipeline_run.py"
+    - "pip install -r requirements.txt && python pipeline/pipeline_run.py"
 

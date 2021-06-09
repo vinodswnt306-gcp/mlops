@@ -19,7 +19,7 @@ CONTAINER_NAME = os.environ["CONTAINER_NAME"]
 # CONTAINER_NAME = 'vinodswnt306/new_public_mlops:aada71f'
 
 # Step 1 of Kubeflow pipeline 
-Read the data 
+# Read the data 
 @dsl.python_component(
     name='read_split',
     description='',
